@@ -2,6 +2,7 @@
 
 export(readEquidistantCsv)
 export(read_csvDouble)
+export(removeLastIncompleteRecord)
 export(updateOutputRange)
 import(dplyr)
 import(tidyr)
@@ -31,3 +32,5 @@ importFrom(stats,setNames)
 importFrom(tibble,as_tibble)
 importFrom(tibble,tibble)
 importFrom(tibble,tribble)
+importFrom(utils,head)
+importFrom(utils,tail)

@@ -20,6 +20,7 @@ Reading logger fires
 }%itemize
 
 Updating parts of a data.frame: \itemize{
+\item Skipping uncomple last records: \code{\link{removeLastIncompleteRecord}}  
 \item Updating parts of a data.frame: \code{\link{updateOutputRange}}  
 }%itemize
 

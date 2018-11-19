@@ -20,6 +20,21 @@ dsTarget <- rbind( dsTarget0, mutate(dsTarget0, canopyPosition = "openLand")) %>
   mutate(canopyPosition = factor(canopyPosition))
 indexColumns <- c("canopyPosition","treatment")
 
+test_that("removeLastIncompleteRecord", {
+  ds <- dsTarget %>% group_by_at(vars(one_of(indexColumns)))
+  ans <- removeLastIncompleteRecord(ds, "date")
+  expect_equal( count(ans)$n, c(10,10))
+  #
+  ds <- dsTarget %>% 
+    mutate(
+      date = as.POSIXct(
+        ifelse(row_number() == n(), date - 10, date), origin = '1970-01-01')
+    ) %>% 
+    group_by_at(vars(one_of(indexColumns))) 
+  ans <- removeLastIncompleteRecord(ds, "date")
+  expect_equal( count(ans)$n, c(10,9))
+})
+
 test_that("updateOutputRange normal case",{
   dsNew <- dsTarget %>% slice(3:8) %>% mutate(resp = resp + 20.0)
   dsUp <- updateOutputRange(dsTarget, dsNew, indexColumns = indexColumns) %>%
