@@ -145,47 +145,6 @@ checkSameTimestep <- function(dsNew, dsTarget, dateColumn) {
   if (timestepNewSec != timestepTargetSec) stop(
     "Target has a different time step than source")
 }
-
-
-#' @export
-expandAllInconsistentFactorLevels <- function(
-  ### expand a factor variables in all dataset to encompass levels of all sets
-  datasets    ##<< list of data.frames
-  , noWarningCols = character(0)  ##<< string vector: do not warn for the these
-  ## columns
-) {
-  isInconsistentFactor <- sapply( names(datasets[[1]]),  function(col){
-    any(map_lgl(
-      datasets, ~is.factor(.[[col]]))) &&
-      any(map_lgl(
-        datasets, ~any(levels(.[[col]]) != levels(datasets[[1]][[col]]))))
-  })
-  colNamesInc <- names(datasets[[1]])[isInconsistentFactor]
-  colNamesWarn <- setdiff(colNamesInc, noWarningCols)
-  if (length(colNamesWarn)) warning(
-      "releveling factors ", paste(colNamesWarn , collapse = ","))    
-  for (col in colNamesInc) datasets <- expandFactorLevels(datasets, col)
-  ##value<< \code{datasets} with updated factor columns
-  datasets
-}
-
-
-#' @export
-expandFactorLevels <- function(
-  ### expand a factor in all dataset to encompass levels of all sets
-  datasets    ##<< list of data.frames
-  , varName   ##<< scalar string of variable holding the factor
-) {
-  #https://stackoverflow.com/questions/46876312/how-to-merge-factors-when-binding-two-dataframes-together/50503461#50503461
-  groupLevels <- lvls_union(lapply(datasets, "[[", varName))
-  force(varName)
-  ans <- map(datasets, function(dss){
-    mutate(dss, !!varName := fct_expand(!!sym(varName), groupLevels))
-  })
-  ##value<< \code{datasets} with each entries column relevelel
-  ans
-}
-
 replaceGroup <- function(
   ### replace a single group of new in target
   dsTarget, dsNew, indexColumns, dateColumn, group
@@ -288,9 +247,50 @@ getFilledAfter <- function(
   bind_rowsFactors(a,b)
 }
 
+#----------- expand factor levels ------------
+
+#' @export
+expandAllInconsistentFactorLevels <- function(
+  ### expand a factor variables in all dataset to encompass levels of all sets
+  datasets    ##<< list of data.frames
+  , noWarningCols = character(0)  ##<< string vector: do not warn for the these
+  ## columns
+) {
+  isInconsistentFactor <- sapply( names(datasets[[1]]),  function(col){
+    any(map_lgl(
+      datasets, ~is.factor(.[[col]]))) &&
+      any(map_lgl(
+        datasets, ~any(levels(.[[col]]) != levels(datasets[[1]][[col]]))))
+  })
+  colNamesInc <- names(datasets[[1]])[isInconsistentFactor]
+  colNamesWarn <- setdiff(colNamesInc, noWarningCols)
+  if (length(colNamesWarn)) warning(
+    "releveling factors ", paste(colNamesWarn , collapse = ","))    
+  for (col in colNamesInc) datasets <- expandFactorLevels(datasets, col)
+  ##value<< \code{datasets} with updated factor columns
+  datasets
+}
+
+
+#' @export
+expandFactorLevels <- function(
+  ### expand a factor in all dataset to encompass levels of all sets
+  datasets    ##<< list of data.frames
+  , varName   ##<< scalar string of variable holding the factor
+) {
+  #https://stackoverflow.com/questions/46876312/how-to-merge-factors-when-binding-two-dataframes-together/50503461#50503461
+  groupLevels <- lvls_union(lapply(datasets, "[[", varName))
+  force(varName)
+  ans <- map(datasets, function(dss){
+    mutate(dss, !!varName := fct_expand(!!sym(varName), groupLevels))
+  })
+  ##value<< \code{datasets} with each entries column relevelel
+  ans
+}
+
+
 .tmp.f <- function(){
   load("tmp/ETLys.RData")
   load("tmp/ETLysTmp.RData")
   ans <- updateOutputRange(ETLys, ETLysTmp, dateColumn = "timestamp")
-  
 }
