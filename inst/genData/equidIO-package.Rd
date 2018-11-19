@@ -13,15 +13,17 @@ based on start and end times.
 
 \details{
 
-Reading logger fires
+Reading logger files
 \itemize{
 \item Extended read_csv: \code{\link{readEquidistantCsv}}  
 \item Prevent reading double variable as integer: \code{\link{read_csvDouble}}  
 }%itemize
 
-Updating parts of a data.frame: \itemize{
-\item Skipping uncomple last records: \code{\link{removeLastIncompleteRecord}}  
-\item Updating parts of a data.frame: \code{\link{updateOutputRange}}  
+Updating result files and frames: \itemize{
+\item Skip uncomple last records: \code{\link{removeLastIncompleteRecord}}  
+\item Update time-ordered data stored in RData file with new data: 
+  \code{\link{updateRData}}  
+\item Update parts of a data.frame: \code{\link{updateOutputRange}}  
 }%itemize
 
 Also have a look at the \href{../doc/index.html}{package vignettes}.

@@ -1,9 +1,78 @@
 #' @export
+removeLastIncompleteRecord <- function(
+  ### remove last row, if its timestep does not match (second - first row)
+  data   ##<< the data.frame to check
+  , colTimestamp = "timestamp"  ##<< scalar sting column name
+  ## holding the time steps
+){
+  ##details<< Expects the timestamp column to hold end-of period timestamps
+  ## with no missings.
+  ## If the timestep is smaller than the first, this indicates that the
+  ## data of the last time step was not complete yet.
+  ## This method checks on this condition and removes an incomplete last row.
+  fRemoveSingleGroup <- function(data, colTimestamp){
+    if (nrow(data) <= 2) return(data)
+    if (any(is.na(data[[colTimestamp]]))) stop(
+      "no missings allowed in timestamp column ", colTimestamp)
+    timestepFirst <- diff(head(data[[colTimestamp]], 2L))
+    timestepLast <- diff(tail(data[[colTimestamp]], 2L))
+    ##value<< \code{data} with last row removed, if the time step is incomplete
+    if (timestepLast == timestepFirst) return(data)
+    slice(data, -n())
+  }
+  .mapGroups(data, fRemoveSingleGroup, colTimestamp = colTimestamp)
+}
+
+# copied from lysiproc package
+.mapGroups <- function(
+  ### split-map-combine
+  data  ##<< groped data.frame
+  , FUN  ##<< function(data.frmae, ...) -> data.frame to apply to subsets
+  , ...  ##<< further arguments to FUN
+  , drop = TRUE  ##<< logical indicating if levels that do not occur should 
+  ## be dropped. Set to FALSE if FUN returns a data.frame also 
+  ## for zero-row inputs.
+){
+  # https://coolbutuseless.bitbucket.io/2018/03/03/split-apply-combine-my-search-for-a-replacement-for-group_by---do/
+  groupVars <- group_vars(data)
+  if (!length(groupVars)) return(FUN(data,...))
+  data %>% 
+    split(select(.,groupVars), drop = drop) %>% 
+    map_dfr(FUN,...)
+}
+
+#--------- updateRData --------------
+#' @export
+updateRData <- function(
+  ### update time-ordered data stored in RData file with new data
+  newData         ##<< the updated data
+  , fileName      ##<< scalar string path name of the RData file
+  , objectName = file_path_sans_ext(basename(fileName)) ##<< scalar 
+  ## string: the name of the R-object. By default the basename of the 
+  , message = paste("updated", objectName, "in file", fileName) ##<< scalar
+  ## string of a message to be displaced.
+  , ...   ##<< further arguments to \code{\link{updateOutputRange}}, 
+  ## such as \code{dateColumn} and \code{indexColumns}.
+){
+  if (!file.exists(fileName)) {
+    updatedData <- newData
+  } else {
+    ##details<< Assumes that fileName refers to an RData file with 
+    ## only one object inside
+    origData <- local({load(fileName); get(ls()[1])})
+    updatedData <- updateOutputRange(origData, newData, ...)
+  }
+  assign(objectName, updatedData)
+  save( list = objectName, file = fileName)
+  if (length(message))  base::message(message)
+}
+
+#' @export
 updateOutputRange <- function(
-  ### update part of the data.frame with new values
+  ### update part of the time-ordered data.frame with new values
   dsTarget              ##<< data.frame to update
   , dsNew               ##<< data.frame with new values
-  , indexColumns = c()  ##<< other index columns beside date
+  , indexColumns = group_vars(dsNew)  ##<< other index columns beside date
   , dateColumn = "date" ##<< name of the column holding the dates/times
 ){
   ##details<< Update values of \code{dsNew} in \code{dsTarget}. Both
@@ -177,48 +246,5 @@ updateOutputRange <- function(
   b = b %>% group_by(g) %>% mutate(n = 2)
   #bind_rows(a,b)
   bind_rowsFactors(a,b)
-}
-
-#' @export
-removeLastIncompleteRecord <- function(
-  ### remove last row, if its timestep does not match (second - first row)
-  data   ##<< the data.frame to check
-  , colTimestamp = "timestamp"  ##<< scalar sting column name
-  ## holding the time steps
-){
-  ##details<< Expects the timestamp column to hold end-of period timestamps
-  ## with no missings.
-  ## If the timestep is smaller than the first, this indicates that the
-  ## data of the last time step was not complete yet.
-  ## This method checks on this condition and removes an incomplete last row.
-  fRemoveSingleGroup <- function(data, colTimestamp){
-    if (nrow(data) <= 2) return(data)
-    if (any(is.na(data[[colTimestamp]]))) stop(
-      "no missings allowed in timestamp column ", colTimestamp)
-    timestepFirst <- diff(head(data[[colTimestamp]], 2L))
-    timestepLast <- diff(tail(data[[colTimestamp]], 2L))
-    ##value<< \code{data} with last row removed, if the time step is incomplete
-    if (timestepLast == timestepFirst) return(data)
-    slice(data, -n())
-  }
-  .mapGroups(data, fRemoveSingleGroup, colTimestamp = colTimestamp)
-}
-
-# copied from lysiproc package
-.mapGroups <- function(
-  ### split-map-combine
-  data  ##<< groped data.frame
-  , FUN  ##<< function(data.frmae, ...) -> data.frame to apply to subsets
-  , ...  ##<< further arguments to FUN
-  , drop = TRUE  ##<< logical indicating if levels that do not occur should 
-  ## be dropped. Set to FALSE if FUN returns a data.frame also 
-  ## for zero-row inputs.
-){
-  # https://coolbutuseless.bitbucket.io/2018/03/03/split-apply-combine-my-search-for-a-replacement-for-group_by---do/
-  groupVars <- group_vars(data)
-  if (!length(groupVars)) return(FUN(data,...))
-  data %>% 
-    split(select(.,groupVars), drop = drop) %>% 
-    map_dfr(FUN,...)
 }
 

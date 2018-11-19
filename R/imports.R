@@ -14,5 +14,6 @@ NULL
 
 #' @importFrom stats setNames 
 #' @importFrom utils head tail
+#' @importFrom tools file_path_sans_ext
 NULL
 
