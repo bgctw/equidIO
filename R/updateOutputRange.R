@@ -90,9 +90,12 @@ updateOutputRange <- function(
   ##details<< The function requires that both data.frames have unique dates
   ## per index in equidistant time steps. The time steps must match.
   dsNew <- if (nIndex) {
+    groupsVarsOrig <- group_vars(dsNew)
     dsNew %>%
+      ungroup() %>% 
       unite(".group", !!!syms(indexColumns), remove = FALSE) %>%
-      mutate(.group = factor(!!sym(".group")))
+      mutate(.group = factor(!!sym(".group"))) %>% 
+      group_by(!!!syms(groupsVarsOrig))
   } else {
     dsNew %>% mutate(.group = factor(1))
   }
@@ -107,9 +110,12 @@ updateOutputRange <- function(
   if (any( diffDateSrc[[2]] != diffDateSrc[[2]][1])) stop(
     "Src has no equidistant time across groups")
   dsTarget <- if (nIndex) {
+    groupsVarsOrig <- group_vars(dsTarget)
     dsTarget %>%
+      ungroup() %>% 
       unite(".group", !!!syms(indexColumns), remove = FALSE) %>%
-      mutate(.group = factor(!!sym(".group")))
+      mutate(.group = factor(!!sym(".group"))) %>% 
+      group_by(!!!syms(groupsVarsOrig))
   } else {
     dsTarget %>% mutate(.group = factor(1))
   }
@@ -248,3 +254,9 @@ updateOutputRange <- function(
   bind_rowsFactors(a,b)
 }
 
+.tmp.f <- function(){
+  load("tmp/ETLys.RData")
+  load("tmp/ETLysTmp.RData")
+  ans <- updateOutputRange(ETLys, ETLysTmp, dateColumn = "timestamp")
+  
+}
