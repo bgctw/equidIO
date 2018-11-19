@@ -78,6 +78,28 @@ updateOutputRange <- function(
   ##details<< Update values of \code{dsNew} in \code{dsTarget}. Both
   ## data.frames must have the same columns. Each row is identified by
   ## data and values in the indexColumns.
+  checkEqualColNames(dsTarget, dsNew)
+  ##details<< The function requires that both data.frames have unique dates
+  ## per index in equidistant time steps. The time steps must match.
+  dsNew <- dsNew %>% checkEquidistant(indexColumns, dateColumn, "Source")
+  dsTarget <- dsTarget %>% checkEquidistant(indexColumns, dateColumn, "Target")
+  checkSameTimestep(dsTarget, dsNew, dateColumn)
+  datasets <- expandAllInconsistentFactorLevels(
+    list(dsTarget, dsNew), noWarningCols = ".group")
+  dsTarget <- datasets[[1]]
+  dsNew <- datasets[[2]]
+  ##details<< Existing rows of the same index and time in the range of
+  ## \code{dsNew}
+  ## are dropped from \code{dsTarget}, and rows of \code{dsNew} are appended.
+  newGroups <- unique(dsNew$.group)
+  for (group in newGroups)  
+     dsTarget <- replaceGroup(dsTarget, dsNew, indexColumns, dateColumn, group)
+  ##value<< arguemt \code{dsTarget} with rows of \code{dsNew} updated.
+  ans <- dsTarget %>% select(-!!sym(".group"))
+  ans
+}
+
+checkEqualColNames <- function(dsTarget, dsNew) {
   iMissing <- which(is.na(match(names(dsNew), names(dsTarget))))
   if (length(iMissing)) stop(
     "The following columns do not exist in target: "
@@ -86,135 +108,147 @@ updateOutputRange <- function(
   if (length(iMissing)) stop(
     "The following columns do not exist in source: "
     , paste(names(dsTarget)[iMissing], collapse = ","))
+}
+
+checkEquidistant <- function(
+  data, indexColumns, dateColumn, dataName = "data"
+) {
   nIndex <- length(indexColumns)
-  ##details<< The function requires that both data.frames have unique dates
-  ## per index in equidistant time steps. The time steps must match.
-  dsNew <- if (nIndex) {
-    groupsVarsOrig <- group_vars(dsNew)
-    dsNew %>%
+  data <- if (nIndex) {
+    groupsVarsOrig <- group_vars(data)
+    data %>%
       ungroup() %>% 
       unite(".group", !!!syms(indexColumns), remove = FALSE) %>%
       mutate(.group = factor(!!sym(".group"))) %>% 
       group_by(!!!syms(groupsVarsOrig))
   } else {
-    dsNew %>% mutate(.group = factor(1))
+    data %>% mutate(.group = factor(1))
   }
-  diffDateSrc <- dsNew %>%
+  diffDate <- data %>%
     group_by(!!sym(".group")) %>%
     arrange(!!sym(dateColumn)) %>%
     do(
       as.data.frame(table(diff(as.numeric(.[[dateColumn]]))))
     )
-  if (any((diffDateSrc %>%  count())$n != 1 )) stop(
-    "Src has no equidistant time steps within groups")
-  if (any( diffDateSrc[[2]] != diffDateSrc[[2]][1])) stop(
-    "Src has no equidistant time across groups")
-  dsTarget <- if (nIndex) {
-    groupsVarsOrig <- group_vars(dsTarget)
-    dsTarget %>%
-      ungroup() %>% 
-      unite(".group", !!!syms(indexColumns), remove = FALSE) %>%
-      mutate(.group = factor(!!sym(".group"))) %>% 
-      group_by(!!!syms(groupsVarsOrig))
-  } else {
-    dsTarget %>% mutate(.group = factor(1))
-  }
-  diffDateTarget <- dsTarget %>%
-    group_by(!!sym(".group")) %>%
-    arrange(!!sym(dateColumn)) %>%
-    do(
-        as.data.frame(table(diff(as.numeric(.[[dateColumn]]))))
-      )
-  diffDateSec = diffDateSrc[[2]][1]
-  if (any((diffDateTarget %>%  count())$n != 1 )) stop(
-    "Target has no equidistant time steps within groups")
-  if (any( diffDateTarget[[2]] != diffDateTarget[[2]][1])) stop(
-    "Target has no equidistant time across groups")
-  if (diffDateTarget[[2]][1] != diffDateSec) stop(
+  if (any((diffDate %>%  count())$n != 1 )) stop(
+    dataName, " has no equidistant time steps within groups")
+  if (any( diffDate[[2]] != diffDate[[2]][1])) stop(
+    dataName, "has no equidistant time across groups")
+  ##value<< \code{data} grouped by index column ".group" and
+  ## arranged ascending in dateColumn
+  data
+}
+
+checkSameTimestep <- function(dsNew, dsTarget, dateColumn) {
+  timestepNewSec <- diff(as.numeric(head(dsNew[[dateColumn]],2)))
+  timestepTargetSec <- diff(as.numeric(head(dsTarget[[dateColumn]],2)))
+  if (timestepNewSec != timestepTargetSec) stop(
     "Target has a different time step than source")
-  diffDateSec = as.numeric(levels(diffDateSec)[diffDateSec])
-  # make sure group levels are the same
-  newGroups <- levels(dsNew$.group)
-  if (nIndex) {
-    groupLevels <- lvls_union(list(dsTarget$.group, dsNew$.group))
-    dsTarget <- dsTarget %>%
-      mutate(.group = fct_expand(!!sym(".group"), groupLevels))
-    dsNew <- dsNew %>%
-      mutate(.group = fct_expand(!!sym(".group"), groupLevels))
-  }
-  ##details<< Existing rows of the same index and time in the range of
-  ## \code{dsNew}
-  ## are dropped from \code{dsTarget}, and rows of \code{dsNew} are appended.
-  # for the index columns, transform to string so that rbind works
-  #col <- indexColumns[1]
-  isInconsistentFactor <- sapply( names(dsTarget),  function(col){
-    (is.factor(dsTarget[[col]]) | is.factor(dsNew[[col]])) &&
-       any(levels(dsTarget[[col]]) != levels(dsNew[[col]]))
+}
+
+
+#' @export
+expandAllInconsistentFactorLevels <- function(
+  ### expand a factor variables in all dataset to encompass levels of all sets
+  datasets    ##<< list of data.frames
+  , noWarningCols = character(0)  ##<< string vector: do not warn for the these
+  ## columns
+) {
+  isInconsistentFactor <- sapply( names(datasets[[1]]),  function(col){
+    any(map_lgl(
+      datasets, ~is.factor(.[[col]]))) &&
+      any(map_lgl(
+        datasets, ~any(levels(.[[col]]) != levels(datasets[[1]][[col]]))))
   })
-  if (sum(isInconsistentFactor)) warning(
-    "releveling factors ", paste(names(dsTarget)[isInconsistentFactor], collapse = ","))
+  colNamesInc <- names(datasets[[1]])[isInconsistentFactor]
+  colNamesWarn <- setdiff(colNamesInc, noWarningCols)
+  if (length(colNamesWarn)) warning(
+      "releveling factors ", paste(colNamesWarn , collapse = ","))    
+  for (col in colNamesInc) datasets <- expandFactorLevels(datasets, col)
+  ##value<< \code{datasets} with updated factor columns
+  datasets
+}
+
+
+#' @export
+expandFactorLevels <- function(
+  ### expand a factor in all dataset to encompass levels of all sets
+  datasets    ##<< list of data.frames
+  , varName   ##<< scalar string of variable holding the factor
+) {
   #https://stackoverflow.com/questions/46876312/how-to-merge-factors-when-binding-two-dataframes-together/50503461#50503461
-  for (col in names(dsTarget)[isInconsistentFactor]) {
-    allLevels = lvls_union(list(dsTarget[[col]], dsNew[[col]]))
-    dsTarget <- dsTarget %>% mutate(!!col := fct_expand(UQ(sym(col)), allLevels))
-    dsNew <- dsNew %>% mutate(!!col := fct_expand(UQ(sym(col)), allLevels))
-  }
-  #group <- newGroups[1]
-  for (group in newGroups) {
-     dsNewGroup <- filter(dsNew, UQ(sym(".group")) == group)
-     dates <- dsNewGroup[[dateColumn]]
-     # dsTargetGroupOutside <- dsTarget %>%
-     #   filter(UQ(sym(".group")) == group) %>%
-     #   filter(UQ(sym(dateColumn)) < min(dates) | UQ(sym(dateColumn)) > max(dates))
-     dsTargetGroupBefore <- dsTarget %>%
-       filter(UQ(sym(".group")) == group) %>%
-       filter(UQ(sym(dateColumn)) < min(dates))
-     dsFillBefore <- data.frame()
-     if (nrow(dsTargetGroupBefore)) {
-       maxBefore <- max(dsTargetGroupBefore[[dateColumn]])
-       minNew <- min(dates)
-       gapSeconds = as.numeric(minNew) - as.numeric(maxBefore)
-       nDiffs = as.integer(gapSeconds / diffDateSec)
-       if (nDiffs != gapSeconds / diffDateSec) stop(
-         "times of target are misaligned with times of new")
-       if (nDiffs != 1) {
-         dsFillBefore = cbind(setNames(data.frame(
-           maxBefore + (1:(nDiffs - 1))*diffDateSec
-           ), dateColumn)
-           , dsTargetGroupBefore[1,indexColumns,drop = FALSE])
-       }
-     }
-     dsTargetGroupAfter <- dsTarget %>%
-       filter(UQ(sym(".group")) == group) %>%
-       filter(UQ(sym(dateColumn)) > max(dates))
-     dsFillAfter <- data.frame()
-     if (nrow(dsTargetGroupAfter)) {
-       minAfter <- min(dsTargetGroupAfter[[dateColumn]])
-       maxNew <- max(dates)
-       gapSeconds = as.numeric(minAfter) - as.numeric(maxNew)
-       nDiffs = as.integer(gapSeconds / diffDateSec)
-       if (nDiffs != gapSeconds / diffDateSec) stop(
-         "times of target are misaligned with times of new")
-       if (nDiffs != 1) {
-         dsFillAfter = cbind(setNames(data.frame(
-           maxNew + (1:(nDiffs - 1))*diffDateSec
-         ), dateColumn)
-         , dsTargetGroupAfter[1,indexColumns,drop = FALSE])
-       }
-     }
-     dsTargetOtherGroups <- filter(dsTarget, UQ(sym(".group")) != group)
-     dsTarget <- bind_rows(
-       dsTargetOtherGroups
-       , dsTargetGroupBefore
-       , dsFillBefore
-       , dsNewGroup
-       , dsFillAfter
-       , dsTargetGroupAfter
-     )
-  }
-  ##value<< arguemt \code{dsTarget} with rows of \code{dsNew} updated.
-  ans <- dsTarget %>% select(-!!sym(".group"))
+  groupLevels <- lvls_union(lapply(datasets, "[[", varName))
+  force(varName)
+  ans <- map(datasets, function(dss){
+    mutate(dss, !!varName := fct_expand(!!sym(varName), groupLevels))
+  })
+  ##value<< \code{datasets} with each entries column relevelel
   ans
+}
+
+replaceGroup <- function(
+  ### replace a single group of new in target
+  dsTarget, dsNew, indexColumns, dateColumn, group
+) {
+  dsNewGroup <- filter(dsNew, UQ(sym(".group")) == group)
+  timestepSec <- diff(as.numeric(head(dsTarget[[dateColumn]],2)))
+  dates <- dsNewGroup[[dateColumn]]
+  # same group but before timestamp of new
+  dsTargetGroupBefore <- dsTarget %>%
+    filter(UQ(sym(".group")) == group) %>%
+    filter(UQ(sym(dateColumn)) < min(dates))
+  # if new is after but not adjacent to target, need to fill empty lines
+  dsFillBefore <- getFillBefore(
+    dsTargetGroupBefore, dateColumn, min(dates), timestepSec, indexColumns)
+  dsTargetGroupAfter <- dsTarget %>%
+    filter(UQ(sym(".group")) == group) %>%
+    filter(UQ(sym(dateColumn)) > max(dates))
+  # if fill is before target but not adjacent need to created fill lines
+  dsFillAfter <- getFilledAfter(
+    dsTargetGroupAfter, dateColumn, max(dates), timestepSec, indexColumns) 
+  dsTargetOtherGroups <- filter(dsTarget, UQ(sym(".group")) != group)
+  dsTarget <- bind_rows(
+    dsTargetOtherGroups
+    , dsTargetGroupBefore
+    , dsFillBefore
+    , dsNewGroup
+    , dsFillAfter
+    , dsTargetGroupAfter
+  )
+}
+
+getFillBefore <- function(
+  dsTargetGroupBefore, dateColumn, minDateNew, timestepSec, indexColumns
+) {
+  if (!nrow(dsTargetGroupBefore)) return(data.frame())
+  maxBefore <- max(dsTargetGroupBefore[[dateColumn]])
+  gapSeconds = as.numeric(minDateNew) - as.numeric(maxBefore)
+  nDiffs = as.integer(gapSeconds / timestepSec)
+  if (nDiffs != gapSeconds / timestepSec) stop(
+    "times of target are misaligned with times of new")
+  if (nDiffs == 1) return(data.frame())
+  ##value<< data.frame with dateColumn and index columns or empty data.frame
+  cbind(setNames(data.frame(
+    maxBefore + (1:(nDiffs - 1))*timestepSec
+  ), dateColumn)
+  , dsTargetGroupBefore[1,indexColumns,drop = FALSE])
+}
+
+getFilledAfter <- function(
+  dsTargetGroupAfter, dateColumn, maxDateNew, timestepSec, indexColumns
+) {
+  if (!nrow(dsTargetGroupAfter)) return(data.frame())
+  minAfter <- min(dsTargetGroupAfter[[dateColumn]])
+  gapSeconds = as.numeric(minAfter) - as.numeric(maxDateNew)
+  nDiffs = as.integer(gapSeconds / timestepSec)
+  if (nDiffs != gapSeconds / timestepSec) stop(
+    "times of target are misaligned with times of new")
+  if (nDiffs == 1) return(data.frame())
+  ##value<< data.frame with dateColumn and index columns or empty data.frame
+  cbind(setNames(data.frame(
+    maxDateNew + (1:(nDiffs - 1))*timestepSec
+  ), dateColumn)
+  , dsTargetGroupAfter[1,indexColumns,drop = FALSE])
 }
 
 .tmp.f <- function(){

@@ -72,7 +72,7 @@ test_that("updateOutputRange additional times with gap after target",{
   dsUp <- updateOutputRange(dsTarget1, dsNew, indexColumns = indexColumns) %>%
     arrange(canopyPosition, date)
   expect_equal( nrow(dsUp), nrow(dsTarget))
-  dsUp %>% group_by(!!!syms(indexColumns)) %>% nest() %>%
+  dsUp %>% group_by(!!!rlang::syms(indexColumns)) %>% nest() %>%
     mutate(ans = map_lgl(data, function(dss){
       expect_true( all(diff(as.numeric(dss$date)) == 1800))
     }))
@@ -87,7 +87,7 @@ test_that("updateOutputRange additional times with gap before target",{
   dsUp <- updateOutputRange(dsTarget1, dsNew, indexColumns = indexColumns) %>%
     arrange(canopyPosition, date)
   expect_equal( nrow(dsUp), nrow(dsTarget))
-  dsUp %>% group_by(!!!syms(indexColumns)) %>% nest() %>%
+  dsUp %>% group_by(!!!rlang::syms(indexColumns)) %>% nest() %>%
     mutate(ans = map_lgl(data, function(dss){
       expect_true( all(diff(as.numeric(dss$date)) == 1800))
     }))
