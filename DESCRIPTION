@@ -1,0 +1,14 @@
+Package: equidIO
+Title: Reading and writing equidistant data
+Version: 0.0.0.9000
+Author: Thomas Wutzler
+Maintainer: Thomas Wutzler <twutz@bgc-jena.mpg.de>
+Description: Reading and writing equidistant data.
+Depends: R (>= 3.2.0)
+Imports: readr, dplyr, purrr, rlang, tibble, tidyr, forcats
+Suggests: testthat, knitr
+License: GPL-3
+LazyLoad: yes
+LazyData: true
+VignetteBuilder: knitr
+RoxygenNote: 6.0.1
