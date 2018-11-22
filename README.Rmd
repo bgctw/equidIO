@@ -16,117 +16,34 @@ knitr::opts_chunk$set(
 )
 ```
 
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/lysiproc)](http://cran.r-project.org/package=lysiproc)
-[![Travis-CI Build Status](https://travis-ci.org/bgctw/lysiproc.svg?branch=master)](https://travis-ci.org/bgctw/lysiproc)
+[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/equidIO)](http://cran.r-project.org/package=equidIO)
+[![Travis-CI Build Status](https://travis-ci.org/bgctw/equidIO.svg?branch=master)](https://travis-ci.org/bgctw/equidIO)
 
 
 ## Overview
 
-The `lysiproc` package provides functionaly to process data from 
-weighting [lysimeters](https://en.wikipedia.org/wiki/Lysimeter). 
-It helps 
+The `equidIO` package provides functionaly to deal with tabular data composed of 
+records of equidistant time steps.
 
-- Computing flux from weight changes
-- Filtering outliers in fluxes
-- Aggretating ancillary data to half-hour
-- Partitioning ETOrPrecip to ET, dewfall, and rain.
+Main functions are
+
+- efficient reading of parts of such files: 
+  [readEquidistantCsv](https://github.com/bgctw/equidIO/tree/master/vignettes/readEquidistantCsv.md)
+- updating of grouped data.frames with ensuring equidistant time steps: 
+  [updateOutputRange](https://github.com/bgctw/equidIO/tree/master/vignettes/updateOutputRange.md)
 
 
 ## Installation
 
 ```{r, eval = FALSE}
 # From CRAN (in future)
-#install.packages("lysiproc")
+#install.packages("equidIO")
 
 # Or the the development version from GitHub:
 # install.packages("devtools")
-devtools::install_github("bgctw/lysiproc")
+devtools::install_github("bgctw/equidIO")
 ```
 
 ## Usage
 
-A simple example shows ET calculation by example data from the MANIP experiment.
-
-```{r}
-require(lysiproc, quietly = TRUE)
-require(dplyr, quietly = TRUE)
-LysManip1 %>% head(3)
-```
- 
-The `LysManip1` example dataset comes with the package. It records measured 
-weights (kg) and the status of a tank connected to the lower boundery of 
-the lysimeter for two lysimeters for each minute across a few days from the 
-MANIP experiment 
-(TODO ref El-Madany).
-
-The weights for the entire lysimeter-and-tank system, that we are interested, are 
-given in column `weightCorr`.
-
-First differences of these weight across 15 minutes are averaged during half-and hour
-and devided by lysimeters basal area to derive fluxes out of the system (negative
-sign means into the lysimeter)
-in unit `kg/m2/hour`, which corresponds at room temperature roughly to unit
-`mm/hour`.
-
-```{r}
-lysiSetup <- getManipLysimeterSetup()
-aggFluxM <- LysManip1 %>% group_by(lysId) %>% 
-  aggregateMassFlux(lysiSetup)
-aggFluxM %>% head(3)
-```
-
-This generates a dataset with an record for each half hour (timestamp marks the end)
-with column flux and its estimated standard deviation.
-
-In this example of a connected lower boundary, we do not correct for runoff
-but use this flux directly for outlier detection, dewfall estimation,
-and flux partitioning.
-
-```{r example}
-partFluxM <- aggFluxM %>% 
-  mutate(ETOrPrecip = flux) %>% 
-  flagSpatialETOutliers() %>% 
-  partitionETFluxes(lysiSetup)
-names(partFluxM)
-```
-
-A plot of ET shows the typical diurnal pattern.
-
-```{r ETLys, echo=FALSE}
-if (require(ggplot2)) {
-  partFluxM %>% ungroup() %>% 
-    mutate(lysId = as.factor(lysId)) %>% 
-    ggplot(aes(timestamp, ET, color = lysId)) + 
-    geom_point() +
-    #geom_point(aes(y = dewfall), shape = 17) +
-    ylab("ET (mm/hr)") +
-    theme_bw()
-}
-```
-
-Next, we aggregate accross lysimeters to plot-level estimates.
-The indicated standard deviation represent uncertainty of the plot-level flux,
-i.e. the standard error of the mean across lysimeters.
-
-```{r}
-ETPlot <- partFluxM %>% aggregateETSpatial()
-```
-
-```{r ETPlot, echo=FALSE}
-if (require(ggplot2)) {
-  require(tidyr, quietly = TRUE)
-  ETPlot %>% 
-    select(timestamp, rain, dewfall, ET) %>% 
-    gather("component","value", rain, dewfall, ET) %>% 
-    ggplot(aes(timestamp, value, color = component, shape = component)) + 
-    geom_point() +
-    ylab("flux (mm/hr)") +
-    theme_bw()
-}
-```
-
-Currently, the distinction between rain and ET during nights is done based
-on significantly negative values. In the last night, probably some
-scatter in ET around zero has been identified as rain.
-
-See the [package vignettes](https://github.com/bgctw/lysiproc/tree/master/vignettes) (*.md) for further examples.
+See the [package vignettes](https://github.com/bgctw/equidIO/tree/master/vignettes) (*.md) for  examples.

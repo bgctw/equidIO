@@ -1,9 +1,14 @@
 Package: equidIO
-Title: Reading and writing equidistant data
+Title: Read and Write Equidistant Data
 Version: 0.0.0.9000
 Author: Thomas Wutzler
 Maintainer: Thomas Wutzler <twutz@bgc-jena.mpg.de>
-Description: Reading and writing equidistant data.
+Description: Text files with equidistant time steps allow computing line
+    numbers based on start and end time and efficient reading by this
+    function of this package.
+    In addition update functions for data.frames with equidistant time steps
+    are provided that ensure that timesteps are still equidistant after 
+    the update by filling in missing lines if necessary.
 Depends: R (>= 3.2.0)
 Imports: readr, dplyr, purrr, rlang, tibble, tidyr, forcats
 Suggests: testthat, knitr
