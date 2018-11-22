@@ -1,5 +1,5 @@
 Package: equidIO
-Title: Read and Write Equidistant Data
+Title: Read and Update Equidistant Data
 Version: 0.0.0.9000
 Author: Thomas Wutzler
 Maintainer: Thomas Wutzler <twutz@bgc-jena.mpg.de>
@@ -12,6 +12,7 @@ Description: Text files with equidistant time steps allow computing line
 Depends: R (>= 3.2.0)
 Imports: readr, dplyr, purrr, rlang, tibble, tidyr, forcats
 Suggests: testthat, knitr
+URL: https://github.com/bgctw/equidIO
 License: GPL-3
 LazyLoad: yes
 LazyData: true
