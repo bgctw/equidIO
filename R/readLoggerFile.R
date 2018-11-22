@@ -10,8 +10,12 @@ readEquidistantCsv <- function(
   , nRowsColumnHeader = 0L  ##<< number of header rows below column names
   ## e.g. with unit information for each column 
   , ...   ##<< further arguments to \code{\link{read_csv}} 
-  , fCreateTimeStamp        ##<< \code{function(data) -> data} to add column
-  ## timestamp
+  , fCreateTimestamp = fSetTimestampTimezone ##<< a
+    ## \code{function(data, timezone) -> data} 
+    ## to update column timestamp.
+    ## The default assumes the properly formatted timestamp column already in file.
+  , timezone = character()  ##<< if specified, this timezone 
+  ## is set by the default of argument \code{fCreateTimestamp}
   , fReadCsv = read_csv     ##<< variant of \code{\link{read_csv}}
   ## , e.g. \code{\link{read_csvDouble}}
   , col_types = NULL        ##<< see \code{\link{read_csv}}
@@ -26,7 +30,7 @@ readEquidistantCsv <- function(
     fileName, n_max = 2L
     , skip = nRowsHeader + 1L + nRowsColumnHeader
     , col_names = colNames, col_types = col_types, ... )) %>% 
-    fCreateTimeStamp() 
+    fCreateTimestamp(timezone)
   if (any(is.na(df1$timestamp))) stop("Could not create timestamp.")
   strideSec <- diff(as.numeric(df1$timestamp)[1:2])
   startTimeFile <- df1$timestamp[1]
@@ -53,7 +57,7 @@ readEquidistantCsv <- function(
     , skip = nRowsHeader + 1L + nRowsColumnHeader + nRowsSkip 
     , n_max = n_max, col_names = colNames, col_types = col_types, ... 
     ) %>%  
-    fCreateTimeStamp() 
+    fCreateTimestamp(timezone) 
   if (as.POSIXct(round.POSIXt(df$timestamp[1])) != startTime) stop(
     "file ",fileName," has not all equidistant time steps.")
   ##value<< tibble read from file. If \code{nRowsColumnHeader > 0} then
@@ -65,6 +69,16 @@ readEquidistantCsv <- function(
   if (nRowsHeader > 0) attr(df, "header") <- read_lines(
     fileName, n_max = nRowsHeader)
   df
+}
+
+fSetTimestampTimezone <- function(
+  ### set the tzone attribute of column timestamp
+  data  ##<< data.frame with column timestamp
+  ,timezone  ##<< the time zonen to set
+){ 
+  if (length(timezone)) 
+    attr(data$timestamp, "tzone") <- timezone
+  data
 }
 
 #' @export
