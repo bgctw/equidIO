@@ -113,6 +113,9 @@ test_that("updateOutputRange several groups",{
 })
 
 test_that("updateOutputRange additional factor level",{
+  # If the new data.frame contains factors, with new levels. The target factor 
+  # is re-leveled with a warning.
+  #  If the new data contains new levels of the index group, then records are added.
   iRowsN <- c(8:20)
   dsTarget1 <- slice(dsTarget, 1:10) %>% droplevels()
   expect_equal(length(levels(dsTarget1$canopyPosition)), 1L)
@@ -132,6 +135,8 @@ test_that("updateOutputRange additional factor level",{
 })
 
 test_that("no index column",{
+  # test if it also works if no index columns are present
+  # use only the first 10 records of openLand
   iRowsN <- c(8:10)
   iRowsT <- 1:9
   iRowsTKept <- setdiff(iRowsT, iRowsN)
@@ -142,10 +147,12 @@ test_that("no index column",{
   dsUp <- updateOutputRange(dsTarget1, dsNew) %>%
     arrange( date)
   expect_equal( nrow(dsUp), length(iRowsTKept) + length(iRowsN))
+  # kept rows corresponds to target
   #problems with POSIXct: expect_equal( slice(dsUp, -(3:8)), slice(dsTarget, -(3:8)))
   expect_equal( slice(dsUp, iRowsTKept)$date, slice(dsTarget1, iRowsTKept)$date)
   expect_equal( select(slice(dsUp, iRowsTKept), -date)
                 , select(slice(dsTarget1, iRowsTKept), -date))
+  # new rows correspond to new
   #expect_equal( slice(dsUp, (3:8)), slice(dsNew))
   expect_equal( slice(dsUp, iRowsN)$date, slice(dsNew)$date)
   expect_equal( select(slice(dsUp, iRowsN), -date), select(slice(dsNew), -date))

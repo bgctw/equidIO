@@ -1,0 +1,139 @@
+---
+author: "Thomas Wutzler"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteIndexEntry{Example using equations and figures}
+  %\usepackage[UTF-8]{inputenc}
+---
+
+<!--
+rmarkdown::render("vignettes/updateOutputRange.Rmd", output_format = "md_document")
+-->
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(out.extra = 'style="display:block; margin: auto"'
+    #, fig.align="center"
+    , fig.width = 4.3, fig.height = 3.2, dev.args = list(pointsize = 10)
+    )
+knit_hooks$set(spar = function(before, options, envir) {
+    if (before) {
+        par( las = 1 )                    #also y axis labels horizontal
+        par(mar = c(2.0,3.3,0,0) + 0.3 )  #margins
+        par(tck = 0.02 )                  #axe-tick length inside plots             
+        par(mgp = c(1.1,0.2,0) )  #positioning of axis title, axis labels, axis
+     }
+})
+```
+
+# Updating parts in an equidistant grouped data.frame
+
+## Example setup
+
+In order to demonstrate updating, we setup some example data.
+
+The timestamp is equidistant by 30 minutes within each group.
+There are two groups: canopyPosition (10 records each) 
+and treatment (only one level).
+There are two fake data columns: resp and original row number.
+
+```{r message=FALSE}
+require(equidIO, quietly = TRUE)
+require(dplyr, quietly = TRUE)
+dsTarget1 <- tibble(
+  date = seq(ISOdatetime(2010,1,1,0,0,30, tz = "UTC"), by = "30 min", length.out = 10)
+  , resp = as.numeric(1:10)
+  , origRow = 1:10
+  , canopyPosition = "openLand"
+  , treatment = "Nadd"
+)
+dsTarget2 <- dsTarget1 %>% mutate(
+  canopyPosition = "treeCovered"
+  , origRow = 1:10 + nrow(dsTarget1)
+)
+indexColumns <- c("canopyPosition","treatment")
+dsTarget <- rbind( dsTarget1, dsTarget2) %>%
+  arrange(canopyPosition, date) %>%
+  mutate(canopyPosition = factor(canopyPosition)) %>% 
+  group_by_at(vars(indexColumns))
+dsTarget
+```
+
+## Updating target by new data
+Now we have some new data `dsNew` and want to replace the
+corresponding rows `dsTarget`.
+The indexColumns by default correspond to the grouping variables in the new data.
+
+```{r}
+dsNew <- dsNew0 <- ungroup(dsTarget) %>%  #ungroup for slicing across groups
+  slice(3:8) %>%
+  mutate(resp = resp + 1000) %>% 
+  group_by_at(vars(group_vars(dsTarget))) # restore grouping
+dsNew
+dsUp <- updateOutputRange(dsTarget, dsNew) %>%
+  arrange(canopyPosition, date)
+dsUp %>% ungroup() %>% slice(2:12)
+```
+
+From the respiration column it can be seen that the corresponding 
+rows have been updated by an amount of +1000. 
+The rows of the other groups have not been modified.
+
+## Ensuring equidistant records
+
+If there are additional rows, they are appended.
+
+Moreover, if there are missing records between the
+times of the new data and the target, those rows are
+added with missing values.
+
+In the following example, rows 17:20 of the original target are added
+to a data.frame that only consists of rows 1:14. The updated data 
+has additional rows 15 and 16 with missing values.
+
+```{r}
+iRowsT <- 1:14
+iRowsN <- 17:20
+dsTarget1 <- slice(ungroup(dsTarget), iRowsT)
+dsNew <- slice(ungroup(dsTarget), iRowsN) %>% mutate(resp = resp + 1000)
+dsUp <- updateOutputRange(dsTarget1, dsNew, indexColumns = indexColumns) %>%
+  arrange(canopyPosition, date)
+dsUp %>% ungroup() %>% slice(14:18)
+```
+
+## Adding missing factor levels
+If the new data.frame contains factors, with new levels. The target factor 
+is re-leveled with a warning.
+
+If the new data contains new levels of the index group, then records are added.
+
+```{r}
+iRowsN <- c(8:20)
+# drop canopyPosition level "treeCovered"
+dsTarget1 <- slice(ungroup(dsTarget), 1:10) %>% droplevels() 
+dsNew <- slice(ungroup(dsTarget), iRowsN) %>%  
+  mutate(resp = resp + 1000) %>% 
+  droplevels()
+dsUp <- updateOutputRange(dsTarget1, dsNew, indexColumns = indexColumns) %>%
+  arrange(canopyPosition, date)
+dsUp %>% ungroup() %>% slice(6:14)
+```
+
+## Updating data in a file
+
+Convenience, function `updateRData` executes `updateOutputRange` to 
+a data.frame stored in .RData format, as written by `save`.
+
+The object name in the file is by default set to the basename
+of the file without extension.
+
+```{r}
+fileName <- file.path(tempdir(),"updateRDataExample.RData")
+save(dsTarget, file = fileName)
+updateRData(dsNew0, fileName)
+load(fileName)
+updateRDataExample %>% 
+  arrange(canopyPosition, date) %>% ungroup() %>% slice(2:12)
+```
