@@ -22,6 +22,15 @@ removeLastIncompleteRecord <- function(
   }
   .mapGroups(data, fRemoveSingleGroup, colTimestamp = colTimestamp)
 }
+attr(removeLastIncompleteRecord, "ex") <- function(){
+  nRec <- 10
+  dsComplete <- data.frame(date = seq(
+    ISOdatetime(2010,1,1,0,0,30, tz = "UTC"), by = "30 min", length.out = nRec))
+  dsIncomplete <- dsComplete
+  dsIncomplete$date[nRec] <- dsIncomplete$date[nRec] - 2*60
+  nrow( removeLastIncompleteRecord(dsComplete, "date") )
+  nrow( removeLastIncompleteRecord(dsIncomplete, "date") )
+}
 
 # copied from lysiproc package
 .mapGroups <- function(
