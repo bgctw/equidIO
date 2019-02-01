@@ -27,6 +27,7 @@ file and sets the timezone if given to this function.}
 is provided to \code{fCreateTimestamp}, otherwise the functions default is
 used.}
   \item{fReadCsv}{variant of \code{\link{read_csv}}
+used when reading the determined lines
 , e.g. \code{\link{read_csvDouble}}}
   \item{col_types}{see \code{\link{read_csv}}}
 }

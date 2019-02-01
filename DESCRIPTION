@@ -1,6 +1,6 @@
 Package: equidIO
 Title: Read and Update Equidistant Data
-Version: 0.0.1
+Version: 0.0.2
 Author: Thomas Wutzler
 Maintainer: Thomas Wutzler <twutz@bgc-jena.mpg.de>
 Description: Text files with equidistant time steps allow computing line

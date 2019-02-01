@@ -20,6 +20,7 @@ readEquidistantCsv <- function(
   ## is provided to \code{fCreateTimestamp}, otherwise the functions default is
   ## used.
   , fReadCsv = read_csv     ##<< variant of \code{\link{read_csv}}
+  ## used when reading the determined lines
   ## , e.g. \code{\link{read_csvDouble}}
   , col_types = NULL        ##<< see \code{\link{read_csv}}
 ){
