@@ -1,10 +1,11 @@
 .tmp.f <- function(){
   require(testthat) 
+  require(dplyr)
   require(rlang)
 }
 context("readEquidistantCsv")
 
-testData <- tribble(
+testData <- dplyr::tribble(
   ~Date, ~Time, ~minute
   ,"2018-10-03", "06:00", 0
   ,"2018-10-03", "06:15", 15
@@ -15,11 +16,12 @@ testData <- tribble(
 )
 
 tmpDir <- tempdir()
+#tmpDir <- "tmp"
 tmpFile <- file.path(tmpDir, "testData.csv")
-write_csv(testData, tmpFile)
+readr::write_csv(testData, tmpFile)
 
 # generate csvFile with additional header lines not matching column types
-lines <- read_lines(tmpFile)
+lines <- readr::read_lines(tmpFile)
 linesWithUnits <- c(
   lines[1]
   ,"-,-,min"
@@ -27,7 +29,7 @@ linesWithUnits <- c(
   ,lines[-1]
 )
 tmpUnitsFile <- file.path(tmpDir, "testDataUnits.csv")
-write_lines(linesWithUnits, tmpUnitsFile)
+readr::write_lines(linesWithUnits, tmpUnitsFile)
 
 linesWithHeader <- c(
   " Some Header information"
@@ -36,17 +38,17 @@ linesWithHeader <- c(
   , linesWithUnits
 )
 tmpHeaderFile <- file.path(tmpDir, "testDataHeader.csv")
-write_lines(linesWithHeader, tmpHeaderFile)
+readr::write_lines(linesWithHeader, tmpHeaderFile)
 
 createTimestampDateTime <- function(
   ### add column timestamp from columns date and time
   data  ##<< data.frame to mutate
-  , timezone ##<< ignored here
+  , timezone = "GMT" ##<< ignored here
 ){
   data %>%  mutate(
     timestamp = as.POSIXct(
       paste(!!sym("Date"), !!sym("Time"))
-      , format = "%Y-%m-%d %H:%M", tz = "GMT")
+      , format = "%Y-%m-%d %H:%M", tz = timezone)
   )
 }
 
@@ -54,6 +56,13 @@ test_that("readEquidistantCsv",{
   ans <- readEquidistantCsv(tmpFile, fCreateTimestamp = createTimestampDateTime )
   expect_equal( ans$minute, testData$minute)
   expect_equal( ans$timestamp[1], ISOdatetime(2018,10,3,6,0,0, tz = "GMT") )
+})
+
+test_that("readEquidistantCsv with timezone",{
+  ans <- readEquidistantCsv(
+    tmpFile, fCreateTimestamp = createTimestampDateTime, timezone = "UTC" )
+  expect_equal( ans$minute, testData$minute)
+  expect_equal( ans$timestamp[1], ISOdatetime(2018,10,3,6,0,0, tz = "UTC") )
 })
 
 testDataRe <- readEquidistantCsv(tmpFile, fCreateTimestamp = createTimestampDateTime )

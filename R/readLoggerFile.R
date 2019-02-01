@@ -12,10 +12,13 @@ readEquidistantCsv <- function(
   , ...   ##<< further arguments to \code{\link{read_csv}} 
   , fCreateTimestamp = fSetTimestampTimezone ##<< a
     ## \code{function(data, timezone) -> data} 
-    ## to update column timestamp.
-    ## The default assumes the properly formatted timestamp column already in file.
+    ## to update or create column timestamp.
+    ## Argument timezone must have a default.
+    ## The default assumes the properly formatted timestamp column already in
+    ## file and sets the timezone if given to this function.
   , timezone = character()  ##<< if specified, this timezone 
-  ## is set by the default of argument \code{fCreateTimestamp}
+  ## is provided to \code{fCreateTimestamp}, otherwise the functions default is
+  ## used.
   , fReadCsv = read_csv     ##<< variant of \code{\link{read_csv}}
   ## , e.g. \code{\link{read_csvDouble}}
   , col_types = NULL        ##<< see \code{\link{read_csv}}
@@ -29,8 +32,13 @@ readEquidistantCsv <- function(
   df1 <- suppressMessages(read_csv( 
     fileName, n_max = 2L
     , skip = nRowsHeader + 1L + nRowsColumnHeader
-    , col_names = colNames, col_types = col_types, ... )) %>% 
-    fCreateTimestamp(timezone)
+    , col_names = colNames, col_types = col_types, ... )) 
+  df1 <- if (!length(timezone) || !nzchar(timezone)) {
+    # use the default argumetn of the function
+    df1 %>% fCreateTimestamp() 
+  } else {
+    df1 %>% fCreateTimestamp(timezone)
+  }
   if (any(is.na(df1$timestamp))) stop("Could not create timestamp.")
   strideSec <- diff(as.numeric(df1$timestamp)[1:2])
   startTimeFile <- df1$timestamp[1]
@@ -56,8 +64,13 @@ readEquidistantCsv <- function(
     fileName
     , skip = nRowsHeader + 1L + nRowsColumnHeader + nRowsSkip 
     , n_max = n_max, col_names = colNames, col_types = col_types, ... 
-    ) %>%  
-    fCreateTimestamp(timezone) 
+    ) 
+  df <- if (!length(timezone) || !nzchar(timezone)) {
+    # use the default argumetn of the function
+    df %>% fCreateTimestamp() 
+  } else {
+    df %>% fCreateTimestamp(timezone)
+  }
   if (as.POSIXct(round.POSIXt(df$timestamp[1])) != startTime) stop(
     "file ",fileName," has not all equidistant time steps.")
   ##value<< tibble read from file. If \code{nRowsColumnHeader > 0} then

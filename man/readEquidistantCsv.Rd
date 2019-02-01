@@ -19,10 +19,13 @@ e.g. with unit information for each column }
   \item{\dots}{further arguments to \code{\link{read_csv}}}
   \item{fCreateTimestamp}{a
 \code{function(data, timezone) -> data} 
-to update column timestamp.
-The default assumes the properly formatted timestamp column already in file.}
+to update or create column timestamp.
+Argument timezone must have a default.
+The default assumes the properly formatted timestamp column already in
+file and sets the timezone if given to this function.}
   \item{timezone}{if specified, this timezone
-is set by the default of argument \code{fCreateTimestamp}}
+is provided to \code{fCreateTimestamp}, otherwise the functions default is
+used.}
   \item{fReadCsv}{variant of \code{\link{read_csv}}
 , e.g. \code{\link{read_csvDouble}}}
   \item{col_types}{see \code{\link{read_csv}}}
