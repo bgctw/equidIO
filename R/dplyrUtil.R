@@ -61,8 +61,8 @@ attr(mutate_cond,"ex") <- function(){
 }
 
 #----------- expand factor levels ------------
+# exported from equidIO
 
-#' @export
 expandAllInconsistentFactorLevels <- function(
   ### expand a factor variables in all dataset to encompass levels of all sets
   ...  ##<< list of data.frames or several data.frames separated by comma
@@ -71,13 +71,15 @@ expandAllInconsistentFactorLevels <- function(
 ) {
   dots <- list(...)
   datasets <- if (length(dots) == 1) dots[[1]] else dots
-  isInconsistentFactor <- sapply( names(datasets[[1]]),  function(col){
+  colsToCheck <- intersect(names(datasets[[1]]),names(datasets[[2]]))
+  # col <- colsToCheck[1]
+  isInconsistentFactor <- sapply( colsToCheck,  function(col){
     any(map_lgl(
       datasets, ~is.factor(.[[col]]))) &&
       any(map_lgl(
-        datasets, ~any(levels(.[[col]]) != levels(datasets[[1]][[col]]))))
+        datasets, ~!identical(levels(.[[col]]), levels(datasets[[1]][[col]]))))
   })
-  colNamesInc <- names(datasets[[1]])[isInconsistentFactor]
+  colNamesInc <- colsToCheck[isInconsistentFactor]
   colNamesWarn <- setdiff(colNamesInc, .noWarningCols)
   if (length(colNamesWarn)) warning(
     "releveling factors ", paste(colNamesWarn , collapse = ","))    
@@ -86,15 +88,16 @@ expandAllInconsistentFactorLevels <- function(
   datasets
 }
 attr(expandAllInconsistentFactorLevels,"ex") <- function(){
-  df1 <- data.frame(f = factor(c("D","D","C")))
-  df2 <- data.frame(f = factor(c("C","C","A"))
-                    , desc = c("forC1","forC2","forA1"))
-  if (requireNamespace("dplyr"))
-    dplyr::bind_rows(expandAllInconsistentFactorLevels(df1,df2))
-  left_joinFactors(df1,df2)
+  if (exists("expandAllInconsistentFactorLevels")) {
+    df1 <- data.frame(f = factor(c("D","D","C")))
+    df2 <- data.frame(f = factor(c("C","C","A"))
+                      , desc = c("forC1","forC2","forA1"))
+    if (requireNamespace("dplyr"))
+      dplyr::bind_rows(expandAllInconsistentFactorLevels(df1,df2))
+    left_joinFactors(df1,df2)
+  }
 }
 
-#' @export
 expandFactorLevels <- function(
   ### expand a factor in all dataset to encompass levels of all sets
   datasets    ##<< list of data.frames
@@ -111,7 +114,6 @@ expandFactorLevels <- function(
   ans
 }
 
-#' @export
 left_joinFactors <- function(
   ### left join with homogenizing factors before
   x     ##<< left tbl to join
