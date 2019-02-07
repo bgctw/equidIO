@@ -8,7 +8,7 @@
   \item{varName}{scalar string of variable holding the factor}
 }
 
-\value{\code{datasets} with each entries column relevelel}
+\value{list of datasets with each entries column releveled}
 
 \author{Thomas Wutzler}
 

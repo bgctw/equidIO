@@ -94,7 +94,7 @@ updateOutputRange <- function(
   dsTarget <- dsTarget %>% checkEquidistant(indexColumns, dateColumn, "Target")
   checkSameTimestep(dsTarget, dsNew, dateColumn)
   datasets <- expandAllInconsistentFactorLevels(
-    list(dsTarget, dsNew), noWarningCols = ".group")
+    list(dsTarget, dsNew), .noWarningCols = ".group")
   dsTarget <- datasets[[1]]
   dsNew <- datasets[[2]]
   ##details<< Existing rows of the same index and time in the range of

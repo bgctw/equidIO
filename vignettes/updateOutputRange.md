@@ -153,7 +153,7 @@ added.
       arrange(canopyPosition, date)
 
     ## Warning in expandAllInconsistentFactorLevels(list(dsTarget, dsNew),
-    ## noWarningCols = ".group"): releveling factors canopyPosition
+    ## .noWarningCols = ".group"): releveling factors canopyPosition
 
     dsUp %>% ungroup() %>% slice(6:14)
 

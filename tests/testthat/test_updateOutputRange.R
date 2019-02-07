@@ -8,20 +8,22 @@
 #require(testthat)
 context("updateOutputRange")
 
-dsTarget0 <- tibble(
+dsTarget0 <- dplyr::tibble(
   date = seq(ISOdatetime(2010,1,1,0,0,30, tz = "UTC"), by = "30 min", length.out = 10)
   , resp = as.numeric(1:10)
   , sdResp = 10.0 + 1:10
   , canopyPosition = "treeCovered"
   , treatment = "Nadd"
 )
-dsTarget <- rbind( dsTarget0, mutate(dsTarget0, canopyPosition = "openLand")) %>%
-  arrange(canopyPosition, date) %>%
-  mutate(canopyPosition = factor(canopyPosition))
+dsTarget <- rbind( dsTarget0, dplyr::mutate(
+  dsTarget0, canopyPosition = "openLand")) %>%
+  dplyr::arrange(canopyPosition, date) %>%
+  dplyr::mutate(canopyPosition = factor(canopyPosition))
 indexColumns <- c("canopyPosition","treatment")
 
 test_that("removeLastIncompleteRecord", {
-  ds <- dsTarget %>% group_by_at(vars(one_of(indexColumns)))
+  ds <- dsTarget %>% dplyr::group_by_at(
+    dplyr::vars(dplyr::one_of(indexColumns)))
   ans <- removeLastIncompleteRecord(ds, "date")
   expect_equal( count(ans)$n, c(10,10))
   #
