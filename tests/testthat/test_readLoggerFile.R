@@ -43,7 +43,7 @@ readr::write_lines(linesWithHeader, tmpHeaderFile)
 createTimestampDateTime <- function(
   ### add column timestamp from columns date and time
   data  ##<< data.frame to mutate
-  , timezone = "GMT" ##<< ignored here
+  , timezone = "GMT" 
 ){
   data %>%  mutate(
     timestamp = as.POSIXct(

@@ -2,6 +2,7 @@
 
 export(expandAllInconsistentFactorLevels)
 export(expandFactorLevels)
+export(left_joinFactors)
 export(readEquidistantCsv)
 export(read_csvDouble)
 export(removeLastIncompleteRecord)
