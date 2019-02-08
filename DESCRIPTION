@@ -10,11 +10,11 @@ Description: Text files with equidistant time steps allow computing line
     are provided that ensure that time steps are still equidistant after 
     the update by filling in missing lines if necessary.
 Depends: R (>= 3.2.0)
-Imports: readr, dplyr, purrr, rlang, tibble, tidyr, forcats
+Imports: readr, dplyr, purrr, rlang, tibble, tidyr, forcats, dplyrUtil
 Suggests: testthat, knitr
 URL: https://github.com/bgctw/equidIO
 License: GPL-3
 LazyLoad: yes
 LazyData: true
 VignetteBuilder: knitr
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1

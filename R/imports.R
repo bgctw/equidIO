@@ -7,6 +7,7 @@ NULL
 #' @importFrom tibble tibble as_tibble tribble
 #' @importFrom rlang UQ UQS sym syms ':='
 #' @importFrom forcats lvls_union fct_expand
+#' @importFrom dplyrUtil expandAllInconsistentFactorLevels
 NULL
 
 #' @importFrom readr read_csv write_csv read_lines write_lines cols col_guess col_double col_integer col_character col_skip
