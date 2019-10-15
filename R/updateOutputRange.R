@@ -186,6 +186,7 @@ replaceGroup <- function(
 }
 
 getFillBefore <- function(
+  ### create empty lines if new date is not adjacent after garget
   dsTargetGroupBefore, dateColumn, minDateNew, timestepSec, indexColumns
 ) {
   if (!nrow(dsTargetGroupBefore)) return(data.frame())
@@ -203,6 +204,7 @@ getFillBefore <- function(
 }
 
 getFilledAfter <- function(
+  ### create empty lines if new date is not adjacent before garget
   dsTargetGroupAfter, dateColumn, maxDateNew, timestepSec, indexColumns
 ) {
   if (!nrow(dsTargetGroupAfter)) return(data.frame())

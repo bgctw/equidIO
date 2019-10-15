@@ -4,7 +4,7 @@ date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteEngine{knitr::knitr}
-  %\VignetteIndexEntry{Example using equations and figures}
+  %\VignetteIndexEntry{Reading parts of a logger file with equidistant data}
   %\usepackage[UTF-8]{inputenc}
 ---
 

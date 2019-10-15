@@ -4,7 +4,7 @@ date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteEngine{knitr::knitr}
-  %\VignetteIndexEntry{Example using equations and figures}
+  %\VignetteIndexEntry{Updating parts in an equidistant grouped data.frame}
   %\usepackage[UTF-8]{inputenc}
 ---
 
