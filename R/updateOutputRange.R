@@ -158,23 +158,23 @@ replaceGroup <- function(
   ### replace a single group of new in target
   dsTarget, dsNew, indexColumns, dateColumn, group
 ) {
-  dsNewGroup <- filter(dsNew, UQ(sym(".group")) == group)
+  dsNewGroup <- filter(dsNew, .data$.group == group)
   timestepSec <- diff(as.numeric(head(dsTarget[[dateColumn]],2)))
   dates <- dsNewGroup[[dateColumn]]
   # same group but before timestamp of new
   dsTargetGroupBefore <- dsTarget %>%
-    filter(UQ(sym(".group")) == group) %>%
-    filter(UQ(sym(dateColumn)) < min(dates))
+    filter(.data$.group == group) %>%
+    filter(.data[[dateColumn]] < min(dates))
   # if new is after but not adjacent to target, need to fill empty lines
   dsFillBefore <- getFillBefore(
     dsTargetGroupBefore, dateColumn, min(dates), timestepSec, indexColumns)
   dsTargetGroupAfter <- dsTarget %>%
-    filter(UQ(sym(".group")) == group) %>%
-    filter(UQ(sym(dateColumn)) > max(dates))
+    filter(.data$.group == group) %>%
+    filter(.data[[dateColumn]] > max(dates))
   # if fill is before target but not adjacent need to created fill lines
   dsFillAfter <- getFilledAfter(
     dsTargetGroupAfter, dateColumn, max(dates), timestepSec, indexColumns) 
-  dsTargetOtherGroups <- filter(dsTarget, UQ(sym(".group")) != group)
+  dsTargetOtherGroups <- filter(dsTarget, .data$.group != group)
   dsTarget <- bind_rows(
     dsTargetOtherGroups
     , dsTargetGroupBefore
@@ -196,7 +196,7 @@ getFillBefore <- function(
     "times of target are misaligned with times of new")
   if (nDiffs == 1) return(data.frame())
   ##value<< data.frame with dateColumn and index columns or empty data.frame
-  cbind(setNames(data.frame(
+  cbind.data.frame(setNames(data.frame(
     maxBefore + (1:(nDiffs - 1))*timestepSec
   ), dateColumn)
   , dsTargetGroupBefore[1,indexColumns,drop = FALSE])
@@ -213,7 +213,7 @@ getFilledAfter <- function(
     "times of target are misaligned with times of new")
   if (nDiffs == 1) return(data.frame())
   ##value<< data.frame with dateColumn and index columns or empty data.frame
-  cbind(setNames(data.frame(
+  cbind.data.frame(setNames(data.frame(
     maxDateNew + (1:(nDiffs - 1))*timestepSec
   ), dateColumn)
   , dsTargetGroupAfter[1,indexColumns,drop = FALSE])
