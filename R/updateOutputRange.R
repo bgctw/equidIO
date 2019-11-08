@@ -62,6 +62,7 @@ updateRData <- function(
   ## string of a message to be displaced.
   , ...   ##<< further arguments to \code{\link{updateOutputRange}}, 
   ## such as \code{dateColumn} and \code{indexColumns}.
+  , version = 2 ##<< RData version see \code{\link{save}}
 ){
   if (!file.exists(fileName)) {
     updatedData <- newData
@@ -72,7 +73,7 @@ updateRData <- function(
     updatedData <- updateOutputRange(origData, newData, ...)
   }
   assign(objectName, updatedData)
-  save( list = objectName, file = fileName)
+  save( list = objectName, file = fileName, version = version)
   if (length(message))  base::message(message)
 }
 

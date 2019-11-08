@@ -13,12 +13,13 @@ testData <- dplyr::tribble(
   ,"2018-10-03", "06:45", 45
   ,"2018-10-03", "07:00", 60
   ,"2018-10-03", "07:15", 75
-)
+) %>% mutate(minute = as.integer(.data$minute))
 
 tmpDir <- tempdir()
 #tmpDir <- "tmp"
 tmpFile <- file.path(tmpDir, "testData.csv")
 readr::write_csv(testData, tmpFile)
+tmp <- readr::read_csv(tmpFile)
 
 # generate csvFile with additional header lines not matching column types
 lines <- readr::read_lines(tmpFile)
@@ -121,7 +122,7 @@ test_that("readEquidistantCsv endTime after file",{
 test_that("readEquidistantCsv error missing time steps",{
   testData2 <- testData %>% slice(-3)
   tmpFile2 <- file.path(tmpDir,"testData2.csv")
-  write_csv(testData2, tmpFile2)
+  readr::write_csv(testData2, tmpFile2)
   startTime <- testDataRe$timestamp[4] # after missing step
   expect_error(
     ans <- readEquidistantCsv(
@@ -197,7 +198,8 @@ test_that("readEquidistantCsv initial Header startTime and endTime colTypes",{
     , fCreateTimestamp = createTimestampDateTime 
     , startTime = startTime
     , endTime = endTime
-    , col_types = cols(Date = col_character(), Time = col_character())
+    , col_types = readr::cols(
+      Date = readr::col_character(), Time = readr::col_character())
   )
   expect_equal( ans$minute, testData$minute[3:5])
   dfHeader <- attr(ans, "columnHeader")
