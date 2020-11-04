@@ -1,5 +1,5 @@
 .tmp.f <- function(){
-  require(testthat) 
+  require(testthat)
   require(dplyr)
   require(rlang)
 }
@@ -44,12 +44,11 @@ readr::write_lines(linesWithHeader, tmpHeaderFile)
 createTimestampDateTime <- function(
   ### add column timestamp from columns date and time
   data  ##<< data.frame to mutate
-  , timezone = "GMT" 
+  , timezone = "GMT"
 ){
   data %>%  mutate(
     timestamp = as.POSIXct(
-      paste(!!sym("Date"), !!sym("Time"))
-      , format = "%Y-%m-%d %H:%M", tz = timezone)
+      paste(.data$Date, .data$Time), format = "%Y-%m-%d %H:%M", tz = timezone)
   )
 }
 
@@ -71,7 +70,7 @@ testDataRe <- readEquidistantCsv(tmpFile, fCreateTimestamp = createTimestampDate
 test_that("readEquidistantCsv startTime",{
   startTime <- testDataRe$timestamp[3]
   ans <- readEquidistantCsv(
-    tmpFile, fCreateTimestamp = createTimestampDateTime 
+    tmpFile, fCreateTimestamp = createTimestampDateTime
     , startTime = startTime
     )
   expect_equal( ans$minute, testData$minute[-(1:2)])
@@ -81,7 +80,7 @@ test_that("readEquidistantCsv startTime and endTime",{
   startTime <- testDataRe$timestamp[3]
   endTime <- testDataRe$timestamp[5]
   ans <- readEquidistantCsv(
-    tmpFile, fCreateTimestamp = createTimestampDateTime 
+    tmpFile, fCreateTimestamp = createTimestampDateTime
     , startTime = startTime
     , endTime = endTime
   )
@@ -92,7 +91,7 @@ test_that("readEquidistantCsv startTime before file and endTime",{
   startTime <- testDataRe$timestamp[1] - 3600
   endTime <- testDataRe$timestamp[5]
   ans <- readEquidistantCsv(
-    tmpFile, fCreateTimestamp = createTimestampDateTime 
+    tmpFile, fCreateTimestamp = createTimestampDateTime
     , startTime = startTime
     , endTime = endTime
   )
@@ -103,7 +102,7 @@ test_that("readEquidistantCsv startTime before file and endTime",{
 test_that("readEquidistantCsv endTime",{
   endTime <- testDataRe$timestamp[5]
   ans <- readEquidistantCsv(
-    tmpFile, fCreateTimestamp = createTimestampDateTime 
+    tmpFile, fCreateTimestamp = createTimestampDateTime
     , endTime = endTime
   )
   expect_equal( ans$minute, testData$minute[1:5])
@@ -113,7 +112,7 @@ test_that("readEquidistantCsv endTime",{
 test_that("readEquidistantCsv endTime after file",{
   endTime <- testDataRe$timestamp[nrow(testDataRe)] + 3600
   ans <- readEquidistantCsv(
-    tmpFile, fCreateTimestamp = createTimestampDateTime 
+    tmpFile, fCreateTimestamp = createTimestampDateTime
     , endTime = endTime
   )
   expect_equal( ans$minute, testData$minute)
@@ -126,11 +125,11 @@ test_that("readEquidistantCsv error missing time steps",{
   startTime <- testDataRe$timestamp[4] # after missing step
   expect_error(
     ans <- readEquidistantCsv(
-      tmpFile2, fCreateTimestamp = createTimestampDateTime 
+      tmpFile2, fCreateTimestamp = createTimestampDateTime
       , startTime = startTime
     )
     ,"equidistant"
-    
+
   )
 })
 
@@ -138,11 +137,11 @@ test_that("readEquidistantCsv misaligned startTime",{
   startTime <- testDataRe$timestamp[3] + 60*7
   expect_error(
     ans <- readEquidistantCsv(
-      tmpFile, fCreateTimestamp = createTimestampDateTime 
+      tmpFile, fCreateTimestamp = createTimestampDateTime
       , startTime = startTime
     )
     ,"startTime must be a multiple"
-    
+
   )
 })
 
@@ -150,7 +149,7 @@ test_that("readEquidistantCsv misaligned endTime",{
   endTime <- testDataRe$timestamp[3] + 60*7
   expect_error(
     ans <- readEquidistantCsv(
-      tmpFile, fCreateTimestamp = createTimestampDateTime 
+      tmpFile, fCreateTimestamp = createTimestampDateTime
       , endTime = endTime
     )
     ,"multiple"
@@ -163,7 +162,7 @@ test_that("readEquidistantCsv colHeader startTime and endTime",{
   endTime <- testDataRe$timestamp[5]
   ans <- readEquidistantCsv(
     tmpUnitsFile, nRowsColumnHeader = 2
-    , fCreateTimestamp = createTimestampDateTime 
+    , fCreateTimestamp = createTimestampDateTime
     , startTime = startTime
     , endTime = endTime
   )
@@ -178,7 +177,7 @@ test_that("readEquidistantCsv initial Header startTime and endTime",{
   endTime <- testDataRe$timestamp[5]
   ans <- readEquidistantCsv(
     tmpHeaderFile, nRowsColumnHeader = 2, nRowsHeader = 3
-    , fCreateTimestamp = createTimestampDateTime 
+    , fCreateTimestamp = createTimestampDateTime
     , startTime = startTime
     , endTime = endTime
   )
@@ -195,7 +194,7 @@ test_that("readEquidistantCsv initial Header startTime and endTime colTypes",{
   endTime <- testDataRe$timestamp[5]
   ans <- readEquidistantCsv(
     tmpHeaderFile, nRowsColumnHeader = 2, nRowsHeader = 3
-    , fCreateTimestamp = createTimestampDateTime 
+    , fCreateTimestamp = createTimestampDateTime
     , startTime = startTime
     , endTime = endTime
     , col_types = readr::cols(

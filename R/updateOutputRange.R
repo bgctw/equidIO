@@ -38,15 +38,15 @@ attr(removeLastIncompleteRecord, "ex") <- function(){
   data  ##<< groped data.frame
   , FUN  ##<< function(data.frmae, ...) -> data.frame to apply to subsets
   , ...  ##<< further arguments to FUN
-  , drop = TRUE  ##<< logical indicating if levels that do not occur should 
-  ## be dropped. Set to FALSE if FUN returns a data.frame also 
+  , drop = TRUE  ##<< logical indicating if levels that do not occur should
+  ## be dropped. Set to FALSE if FUN returns a data.frame also
   ## for zero-row inputs.
 ){
   # https://coolbutuseless.bitbucket.io/2018/03/03/split-apply-combine-my-search-for-a-replacement-for-group_by---do/
   groupVars <- group_vars(data)
   if (!length(groupVars)) return(FUN(data,...))
-  data %>% 
-    split(select(.,groupVars), drop = drop) %>% 
+  data %>%
+    split(select(.,groupVars), drop = drop) %>%
     map_dfr(FUN,...)
 }
 
@@ -56,18 +56,18 @@ updateRData <- function(
   ### update time-ordered data stored in RData file with new data
   newData         ##<< the updated data
   , fileName      ##<< scalar string path name of the RData file
-  , objectName = file_path_sans_ext(basename(fileName)) ##<< scalar 
-  ## string: the name of the R-object. By default the basename of the 
+  , objectName = file_path_sans_ext(basename(fileName)) ##<< scalar
+  ## string: the name of the R-object. By default the basename of the
   , message = paste("updated", objectName, "in file", fileName) ##<< scalar
   ## string of a message to be displaced.
-  , ...   ##<< further arguments to \code{\link{updateOutputRange}}, 
+  , ...   ##<< further arguments to \code{\link{updateOutputRange}},
   ## such as \code{dateColumn} and \code{indexColumns}.
   , version = 2 ##<< RData version see \code{\link{save}}
 ){
   if (!file.exists(fileName)) {
     updatedData <- newData
   } else {
-    ##details<< Assumes that fileName refers to an RData file with 
+    ##details<< Assumes that fileName refers to an RData file with
     ## only one object inside
     origData <- local({load(fileName); get(ls()[1])})
     updatedData <- updateOutputRange(origData, newData, ...)
@@ -91,21 +91,24 @@ updateOutputRange <- function(
   checkEqualColNames(dsTarget, dsNew)
   ##details<< The function requires that both data.frames have unique dates
   ## per index in equidistant time steps. The time steps must match.
-  dsNew <- dsNew %>% checkEquidistant(indexColumns, dateColumn, "Source")
-  dsTarget <- dsTarget %>% checkEquidistant(indexColumns, dateColumn, "Target")
+  dsNew <- dsNew %>%
+    create_group_column(indexColumns) %>%
+    checkEquidistant(dateColumn, "Source")
+  dsTarget <- dsTarget %>%
+    create_group_column(indexColumns) %>%
+    checkEquidistant(dateColumn, "Target")
   checkSameTimestep(dsTarget, dsNew, dateColumn)
-  datasets <- expandAllInconsistentFactorLevels(
-    list(dsTarget, dsNew), .noWarningCols = ".group")
+  datasets <- expandFactorLevels(list(dsTarget, dsNew), ".group")
   dsTarget <- datasets[[1]]
   dsNew <- datasets[[2]]
   ##details<< Existing rows of the same index and time in the range of
   ## \code{dsNew}
   ## are dropped from \code{dsTarget}, and rows of \code{dsNew} are appended.
   newGroups <- unique(dsNew$.group)
-  for (group in newGroups)  
+  for (group in newGroups)
      dsTarget <- replaceGroup(dsTarget, dsNew, indexColumns, dateColumn, group)
-  ##value<< arguemt \code{dsTarget} with rows of \code{dsNew} updated.
-  ans <- dsTarget %>% select(-!!sym(".group"))
+  ##value<< argument \code{dsTarget} with rows of \code{dsNew} updated.
+  ans <- dsTarget %>% ungroup() %>% select(-.data$.group)
   ans
 }
 
@@ -120,23 +123,27 @@ checkEqualColNames <- function(dsTarget, dsNew) {
     , paste(names(dsTarget)[iMissing], collapse = ","))
 }
 
-checkEquidistant <- function(
-  data, indexColumns, dateColumn, dataName = "data"
-) {
+create_group_column <- function(data, indexColumns) {
   nIndex <- length(indexColumns)
   data <- if (nIndex) {
     groupsVarsOrig <- group_vars(data)
     data %>%
-      ungroup() %>% 
-      unite(".group", !!!syms(indexColumns), remove = FALSE) %>%
-      mutate(.group = factor(!!sym(".group"))) %>% 
-      group_by(!!!syms(groupsVarsOrig))
+      ungroup() %>%
+      unite(".group", all_of(indexColumns), remove = FALSE) %>%
+      mutate(.group = factor(.data$.group)) %>%
+      group_by_at(vars(groupsVarsOrig))
   } else {
     data %>% mutate(.group = factor(1))
   }
+  ##value<< \code{data} with new index column ".group"
+  data
+}
+
+checkEquidistant <- function(data, dateColumn, dataName = "data") {
+  data <- data %>% group_by(.data$.group)
   diffDate <- data %>%
-    group_by(!!sym(".group")) %>%
-    arrange(!!sym(dateColumn)) %>%
+    group_by(.data$.group) %>%
+    arrange(.data[[dateColumn]]) %>%
     do(
       as.data.frame(table(diff(as.numeric(.[[dateColumn]]))))
     )
@@ -155,6 +162,25 @@ checkSameTimestep <- function(dsNew, dsTarget, dateColumn) {
   if (timestepNewSec != timestepTargetSec) stop(
     "Target has a different time step than source")
 }
+
+expandFactorLevels <- function(
+  ### expand a factor in all dataset to encompass levels of all sets
+  datasets    ##<< list of data.frames
+  , varName   ##<< scalar string of variable holding the factor
+){
+  # copied from dplyrUtil
+  #https://stackoverflow.com/questions/46876312/how-to-merge-factors-when-binding-two-dataframes-together/50503461#50503461
+  groupLevels <- lvls_union(lapply(datasets, "[[", varName))
+  force(varName)
+  ans <- map(datasets, function(dss){
+    dss[[varName]] <- factor(dss[[varName]], levels = groupLevels)
+    dss
+  })
+  ##value<< list of datasets with each entries column releveled
+  ans
+}
+
+
 replaceGroup <- function(
   ### replace a single group of new in target
   dsTarget, dsNew, indexColumns, dateColumn, group
@@ -174,7 +200,7 @@ replaceGroup <- function(
     filter(.data[[dateColumn]] > max(dates))
   # if fill is before target but not adjacent need to created fill lines
   dsFillAfter <- getFilledAfter(
-    dsTargetGroupAfter, dateColumn, max(dates), timestepSec, indexColumns) 
+    dsTargetGroupAfter, dateColumn, max(dates), timestepSec, indexColumns)
   dsTargetOtherGroups <- filter(dsTarget, .data$.group != group)
   dsTarget <- bind_rows(
     dsTargetOtherGroups
@@ -221,44 +247,6 @@ getFilledAfter <- function(
   ), dateColumn)
   , dsTargetGroupAfter[1,indexColumns,drop = FALSE])
 }
-
-.tmp.f <- function(){
-  #https://stackoverflow.com/questions/46876312/how-to-merge-factors-when-binding-two-dataframes-together
-
-  bind_rowsFactors <- function(
-    ### bind_rows on two data.frames with merging factors levels
-    a    ##<< first data.frame to bind
-    , b  ##<< second data.frame to bind
-    , ...  ##<< further arguments to \code{bind_rows}
-  ){
-    isInconsistentFactor <- sapply( names(a),  function(col){
-      (is.factor(a[[col]]) | is.factor(b[[col]])) &&
-        any(levels(a[[col]]) != levels(b[[col]]))
-    })
-    if (sum(isInconsistentFactor)) warning(
-      "releveling factors ", paste(names(a)[isInconsistentFactor], collapse = ","))
-    for (col in names(a)[isInconsistentFactor]) {
-      a <- mutate(ungroup(a), !!col := as.character(!!rlang::sym(col)))
-      b <- mutate(ungroup(b), !!col := as.character(!!rlang::sym(col)))
-    }
-    ans <- bind_rows(a, b, ...)
-    # convert former factors form string back to factor
-    for (col in names(ans)[isInconsistentFactor]) {
-      ans <- mutate(ungroup(ans), !!col := factor(!!rlang::sym(col)))
-    }
-    ##value<< result of \code{bind_rows} with inconsistend factor columns still factors
-    ans
-  }
-
-  #library(dplyr)
-  a = data.frame(f = factor(c("a", "b")), g = c("a", "a"))
-  b = data.frame(f = factor(c("a", "c")), g = c("a", "a"))
-  a = a %>% group_by(g) %>% mutate(n = 1)
-  b = b %>% group_by(g) %>% mutate(n = 2)
-  #bind_rows(a,b)
-  bind_rowsFactors(a,b)
-}
-
 
 .tmp.f <- function(){
   load("tmp/ETLys.RData")

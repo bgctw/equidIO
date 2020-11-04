@@ -27,12 +27,12 @@ test_that("removeLastIncompleteRecord", {
   ans <- removeLastIncompleteRecord(ds, "date")
   expect_equal( count(ans)$n, c(10,10))
   #
-  ds <- dsTarget %>% 
+  ds <- dsTarget %>%
     mutate(
       date = as.POSIXct(
         ifelse(row_number() == n(), date - 10, date), origin = '1970-01-01')
-    ) %>% 
-    group_by_at(vars(one_of(indexColumns))) 
+    ) %>%
+    group_by_at(vars(one_of(indexColumns)))
   ans <- removeLastIncompleteRecord(ds, "date")
   expect_equal( count(ans)$n, c(10,9))
 })
@@ -44,7 +44,8 @@ test_that("updateOutputRange normal case",{
   expect_equal( nrow(dsUp), nrow(dsTarget))
   #problems with POSIXct: expect_equal( slice(dsUp, -(3:8)), slice(dsTarget, -(3:8)))
   expect_equal( slice(dsUp, -(3:8))$date, slice(dsTarget, -(3:8))$date)
-  expect_equal( select(slice(dsUp, -(3:8)), -date), select(slice(dsTarget, -(3:8)), -date))
+  expect_equal( select(slice(dsUp, -(3:8)), -date),
+                select(slice(dsTarget, -(3:8)), -date))
   #expect_equal( slice(dsUp, (3:8)), slice(dsNew))
   expect_equal( slice(dsUp, (3:8))$date, slice(dsNew)$date)
   expect_equal( select(slice(dsUp, (3:8)), -date), select(slice(dsNew), -date))
@@ -60,7 +61,8 @@ test_that("updateOutputRange additional times",{
   expect_equal( nrow(dsUp), nrow(dsTarget))
   #problems with POSIXct: expect_equal( slice(dsUp, -(3:8)), slice(dsTarget, -(3:8)))
   expect_equal( slice(dsUp, iRowsT)$date, slice(dsTarget, iRowsT)$date)
-  expect_equal( select(slice(dsUp, iRowsT), -date), select(slice(dsTarget, iRowsT), -date))
+  expect_equal( select(slice(dsUp, iRowsT), -date),
+                select(slice(dsTarget, iRowsT), -date))
   #expect_equal( slice(dsUp, (3:8)), slice(dsNew))
   expect_equal( slice(dsUp, iRowsN)$date, slice(dsNew)$date)
   expect_equal( select(slice(dsUp, iRowsN), -date), select(slice(dsNew), -date))
@@ -74,7 +76,7 @@ test_that("updateOutputRange additional times with gap after target",{
   dsUp <- updateOutputRange(dsTarget1, dsNew, indexColumns = indexColumns) %>%
     arrange(canopyPosition, date)
   expect_equal( nrow(dsUp), nrow(dsTarget))
-  dsUp %>% group_by(!!!rlang::syms(indexColumns)) %>% nest() %>%
+  dsUp %>% group_by(across(indexColumns)) %>% nest() %>%
     mutate(ans = map_lgl(data, function(dss){
       expect_true( all(diff(as.numeric(dss$date)) == 1800))
     }))
@@ -89,7 +91,7 @@ test_that("updateOutputRange additional times with gap before target",{
   dsUp <- updateOutputRange(dsTarget1, dsNew, indexColumns = indexColumns) %>%
     arrange(canopyPosition, date)
   expect_equal( nrow(dsUp), nrow(dsTarget))
-  dsUp %>% group_by(!!!rlang::syms(indexColumns)) %>% nest() %>%
+  dsUp %>% group_by(across(indexColumns)) %>% nest() %>%
     mutate(ans = map_lgl(data, function(dss){
       expect_true( all(diff(as.numeric(dss$date)) == 1800))
     }))
@@ -108,14 +110,15 @@ test_that("updateOutputRange several groups",{
   expect_equal( nrow(dsUp), nrow(dsTarget))
   #problems with POSIXct: expect_equal( slice(dsUp, -(3:8)), slice(dsTarget, -(3:8)))
   expect_equal( slice(dsUp, iRowsT)$date, slice(dsTarget, iRowsT)$date)
-  expect_equal( select(slice(dsUp, iRowsT), -date), select(slice(dsTarget, iRowsT), -date))
+  expect_equal( select(slice(dsUp, iRowsT), -date),
+                select(slice(dsTarget, iRowsT), -date))
   #expect_equal( slice(dsUp, (3:8)), slice(dsNew))
   expect_equal( slice(dsUp, iRowsN)$date, slice(dsNew)$date)
   expect_equal( select(slice(dsUp, iRowsN), -date), select(slice(dsNew), -date))
 })
 
 test_that("updateOutputRange additional factor level",{
-  # If the new data.frame contains factors, with new levels. The target factor 
+  # If the new data.frame contains factors, with new levels. The target factor
   # is re-leveled with a warning.
   #  If the new data contains new levels of the index group, then records are added.
   iRowsN <- c(8:20)
@@ -123,14 +126,18 @@ test_that("updateOutputRange additional factor level",{
   expect_equal(length(levels(dsTarget1$canopyPosition)), 1L)
   dsNew <- slice(dsTarget, iRowsN) %>%  droplevels()
   iRowsT <- setdiff(1:20, iRowsN)
-  expect_warning(
+  # dplyrUitl issued a warning,  dplyr now can deal with unequal factor levels
+  # but does not issue warnings
+  #expect_warning(
     dsUp <- updateOutputRange(dsTarget1, dsNew, indexColumns = indexColumns) %>%
       arrange(canopyPosition, date)
-  )
+  #)
+  expect_equal( levels(dsUp), levels(dsTarget)) # added level in canopyPosition
   expect_equal( nrow(dsUp), nrow(dsTarget))
   #problems with POSIXct: expect_equal( slice(dsUp, -(3:8)), slice(dsTarget, -(3:8)))
   expect_equal( slice(dsUp, iRowsT)$date, slice(dsTarget, iRowsT)$date)
-  expect_equal( select(slice(dsUp, iRowsT), -date), select(slice(dsTarget, iRowsT), -date))
+  expect_equal( select(slice(dsUp, iRowsT), -date),
+                select(slice(dsTarget, iRowsT), -date))
   #expect_equal( slice(dsUp, (3:8)), slice(dsNew))
   expect_equal( slice(dsUp, iRowsN)$date, slice(dsNew)$date)
   expect_equal( select(slice(dsUp, iRowsN), -date), select(slice(dsNew), -date))
